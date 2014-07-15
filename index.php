@@ -12,7 +12,7 @@ if ($query_run = mysql_query($query)) {
 		while ($query_row = mysql_fetch_assoc($query_run)) { //fetching data from SQL to an array
 			$members = $query_row['members'];
 			
-			echo $members.'<form action="index.php" method="POST"><input type="submit" name="members" value="'.$members.'"></form><br>';
+			echo $members.'<form action="index.php" method="POST"><input type="hidden" name="members" value="'.$members.'"><input type="submit" value="Notify"></form><br>';
 		}
 	}
 }
