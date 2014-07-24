@@ -2,45 +2,68 @@
 require 'connect_database.php';
 require 'class.php';
 
-$query = $handler->query('SELECT `members`,`id`, `date_notification` FROM `members`');
+$sql = "SELECT members , id, date_notification FROM members";
+$query = $conn->prepare($sql);
 
-if ($query->rowCount()){
+$query->execute(array());
+
+echo '<form action="index.php" method="POST">';
+
+if ($query->rowCount()) {
 	while($r = $query->fetch(PDO::FETCH_OBJ)) {
 		$members = $r->members;
 		$user_id = $r->id;
 		$date_notification = $r->date_notification;
-		echo $members,'<form action="index.php" method="POST"><input type="hidden" name="members" value="'.$members.'">
-		<input type="hidden" name="user_id" value="'.$user_id.'"><input type="hidden" name="date_notification" value="'.$date_notification.'">
-		<input type="submit" value="Notify"></form><br>';
+		echo '<input type="checkbox" name="user_id[]" value="'.$user_id.'">', $members.' ('.$date_notification.')<br>';
 	}
 } else {
 	echo "No results.";
 }
 
+echo '<input type="submit" value="Notify"></form>';
 
-
-if (isset($_POST['members']) && isset($_POST['user_id']) && isset($_POST['date_notification'])) {
-	$members = $_POST['members'];
+if (isset($_POST['user_id'])) {
 	$user_id = $_POST['user_id'];
-	$date_notification = $_POST['date_notification'];
-	$notified = "Y";
-	$diff_dates = new Dates;
-	$diff_dates_num = $diff_dates->DateCompare($date_notification);
-	$num_of_days = new Dates;
-	$days_num = $num_of_days->num_of_days;
+	foreach($user_id as $element)  {
+		$sql = "SELECT members, date_notification FROM members WHERE id = $element";
+		$query = $conn->prepare($sql);
+		$query->execute(array());
 
+		if($query->rowCount()) {
+			while($r = $query->fetch(PDO::FETCH_OBJ)) {
+				$members = $r->members;
+				$date_notification = $r->date_notification;
+				
+				$diff_dates = new Dates;
+				$diff_dates_num = $diff_dates->DateCompare($date_notification);
+				$num_of_days = new Dates;
+				$days_num = $num_of_days->num_of_days;
 
-	if ($diff_dates_num >= $days_num) {
-		$notification_sql = "INSERT INTO notification (notified, member_id, date_notification) VALUES ('$notified', '$user_id', NOW())";
-		$handler->query($notification_sql);
-		$date_notification_update_sql = "UPDATE members SET date_notification=NOW() WHERE members='$members'";
-		$handler->query($date_notification_update_sql);
-		echo "SQL updated";
-		} else {
-		echo "User has been already notified on $date_notification";
+				if ($diff_dates_num >= $days_num) {
+		
+					$date_notification_update_sql = "UPDATE members SET date_notification=NOW() WHERE members= :members";
+					$query2 = $conn->prepare($date_notification_update_sql);
 
+					$query2->execute(array(
+						':members' => $members
+						));
+					echo 'User <strong>'.$members.'</strong> has been notified successfully. Previous notification was sent on <b>'.$date_notification.'</b><br>';
+					} else {
+					echo 'User <strong>'.$members.'</strong> has been already notified on <strong>'.$date_notification.'</strong> Next notification will be sent in <b>'.$days_num. '</b> day(s).<br>';
+
+					}
+			}
+		}else {
+			echo "No results.";
 		}
+					
+
+	}
 	
+
+}else{
+	echo "Select the users you would like to notify!";
 }
+
 
 ?>
